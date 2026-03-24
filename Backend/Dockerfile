@@ -11,9 +11,8 @@ COPY app/ ./app/
 
 EXPOSE 8000
 
-# Set a default port in case $PORT isn't provided by the environment
-ENV PORT=8000
+# Expose the port
+EXPOSE 8000
 
-# Run uvicorn using the Exec form. 
-# It will use the $PORT environment variable automatically.
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
+# Run Uvicorn directly on port 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
