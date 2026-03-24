@@ -1,0 +1,52 @@
+[
+  {
+    "id": "team_1",
+    "name": "FC Green Eagles",
+    "stadium": "Eagle Nest Stadium",
+    "coach": "Marco Silva",
+    "founded": 2010,
+    "players": 11,
+    "emoji": "🦅",
+    "stats": {
+      "wins": 18,
+      "draws": 4,
+      "losses": 2,
+      "goals_for": 62,
+      "goals_against": 21,
+      "avg_rating": 8.2
+    },
+    "attributes": {
+      "attack": 85,
+      "passing": 78,
+      "defense": 72,
+      "speed": 88,
+      "dribbling": 82,
+      "shooting": 80
+    }
+  },
+  {
+    "id": "team_2",
+    "name": "Black Panthers FC",
+    "stadium": "Panther Den",
+    "coach": "Julian Rogers",
+    "founded": 2012,
+    "players": 11,
+    "emoji": "🐆",
+    "stats": {
+      "wins": 12,
+      "draws": 5,
+      "losses": 7,
+      "goals_for": 44,
+      "goals_against": 30,
+      "avg_rating": 7.6
+    },
+    "attributes": {
+      "attack": 75,
+      "passing": 70,
+      "defense": 80,
+      "speed": 82,
+      "dribbling": 77,
+      "shooting": 74
+    }
+  }
+]

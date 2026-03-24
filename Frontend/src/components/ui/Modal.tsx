@@ -66,6 +66,7 @@ export const Modal: React.FC<ModalProps> = ({
                                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
                                     <h3 className="text-xl font-semibold text-white">{title}</h3>
                                     <button
+                                        title='btn submit'
                                         onClick={onClose}
                                         className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
                                     >
@@ -75,6 +76,7 @@ export const Modal: React.FC<ModalProps> = ({
                             )}
                             {!title && (
                                 <button
+                                title='btn submit'
                                     onClick={onClose}
                                     className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors z-10"
                                 >
