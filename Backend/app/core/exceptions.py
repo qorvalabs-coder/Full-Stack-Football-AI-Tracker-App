@@ -50,6 +50,24 @@ class InvalidUploadError(AppException):
         )
 
 
+class AuthenticationError(AppException):
+    def __init__(self, detail: str = "Authentication failed.") -> None:
+        super().__init__(
+            status_code=401,
+            detail=detail,
+            error_code="UNAUTHORIZED",
+        )
+
+
+class ConflictError(AppException):
+    def __init__(self, detail: str) -> None:
+        super().__init__(
+            status_code=409,
+            detail=detail,
+            error_code="CONFLICT",
+        )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
