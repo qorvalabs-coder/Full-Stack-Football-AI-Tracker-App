@@ -9,7 +9,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY app/ ./app/
 
-# Expose port
 EXPOSE 8000
 
-CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT
+# Set a default port in case $PORT isn't provided by the environment
+ENV PORT=8000
+
+# Run uvicorn using the Exec form. 
+# It will use the $PORT environment variable automatically.
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
