@@ -10,6 +10,9 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+# Install CPU version of PyTorch to save space (avoid CUDA)
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
 # Copy Agent requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
