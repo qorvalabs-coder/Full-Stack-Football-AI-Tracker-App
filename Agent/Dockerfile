@@ -17,14 +17,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy Agent code
 COPY . .
 
-# Copy Backend models (needed for persistence)
-# Note: In Railway, we might need a workaround or copy the Backend/app folder
-# For now, we assume the Backend code is available or we copy only needed parts
-# A better way is to move the persistence models to a shared 'common' package
-# But for a graduation project, we'll just copy the app models here
-COPY ../Backend/app/models/persistence.py ./app/models/persistence.py
-COPY ../Backend/app/core/database.py ./app/core/database.py
-COPY ../Backend/app/core/config.py ./app/core/config.py
+# Note: We've already copied necessary Backend/app files into Agent/app/
+# so they are included in the COPY . . above.
 
 # Set Python path
 ENV PYTHONPATH=/app
