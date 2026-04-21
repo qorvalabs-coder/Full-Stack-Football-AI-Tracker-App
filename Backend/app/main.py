@@ -17,6 +17,13 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     configure_logging()
+    
+    # Ensure database tables are created
+    from app.core.database import engine, Base
+    # Import all models to ensure they are registered with Base
+    import app.models.persistence # noqa
+    Base.metadata.create_all(bind=engine)
+    
     logger.info(
         "Starting %s v%s [%s]",
         settings.app_name,
