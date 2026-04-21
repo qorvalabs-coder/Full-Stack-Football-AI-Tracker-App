@@ -8,4 +8,5 @@ pandas
 celery
 redis
 sqlalchemy
+scikit-learn
 psycopg2-binary
