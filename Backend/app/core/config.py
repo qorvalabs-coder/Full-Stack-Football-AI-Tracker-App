@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     # Infrastructure (Railway)
     database_url: str = "sqlite:///./test.db"
     redis_url: str = "redis://localhost:6379/0"
+    media_root: str = "app/data/media"
+    data_dir: str = "app/data"
+    model_dir: str = "app/models"
 
     @property
     def cors_origins_list(self) -> list[str]:
