@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { cn } from './Button';
+import { cn } from '../../utils/cn';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
