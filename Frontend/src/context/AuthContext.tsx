@@ -9,13 +9,15 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [isAuth, setIsAuth] = useState<boolean>(false);
+    const [isAuth, setIsAuth] = useState<boolean>(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('isAuth') === 'true';
+        }
+        return false;
+    });
 
     useEffect(() => {
-        const storedAuth = localStorage.getItem('isAuth');
-        if (storedAuth === 'true') {
-            setIsAuth(true);
-        }
+        // Any other side effects can go here
     }, []);
 
     const login = () => {

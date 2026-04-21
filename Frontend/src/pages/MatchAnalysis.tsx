@@ -24,12 +24,12 @@ const MatchAnalysis = () => {
         { name: 'Passes', home: 450, away: 320 },
     ];
 
-    const CustomTooltip = ({ active, payload, label }: any) => {
+    const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
         if (active && payload && payload.length) {
             return (
                 <div className="bg-[#0f151c] border border-[#242e3a] p-3 rounded-lg shadow-xl">
                     <p className="text-white font-medium mb-2">{label}</p>
-                    {payload.map((p: any, i: number) => (
+                    {payload.map((p: { fill: string; dataKey: string; value: string | number }, i: number) => (
                         <div key={i} className="flex items-center gap-2 mb-1 last:mb-0 text-sm">
                             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: p.fill }}></div>
                             <span className="text-[#a4b4c4]">{p.dataKey === 'home' ? 'FC Green Eagles' : 'Black Panthers FC'}:</span>
@@ -49,7 +49,7 @@ const MatchAnalysis = () => {
             const dataUrl = await toPng(pageRef.current, {
                 backgroundColor: '#0a0f16',
                 cacheBust: true,
-                filter: (node: any) => {
+                filter: (node: HTMLElement) => {
                     return node.getAttribute?.('data-html2canvas-ignore') !== 'true';
                 }
             });

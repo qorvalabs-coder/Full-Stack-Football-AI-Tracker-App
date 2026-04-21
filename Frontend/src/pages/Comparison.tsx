@@ -31,12 +31,12 @@ const Comparison = () => {
         { name: 'Defending', A: 70, B: 100 },
     ];
 
-    const CustomTooltip = ({ active, payload, label }: any) => {
+    const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
         if (active && payload && payload.length) {
             return (
                 <div className="bg-[#0b1016] border border-[#242e3a] p-3 rounded-lg shadow-xl">
                     <p className="text-white font-medium mb-2">{label}</p>
-                    {payload.map((p: any, i: number) => (
+                    {payload.map((p: { color: string; name: string; value: string | number }, i: number) => (
                         <div key={i} className="flex items-center gap-2 mb-1 last:mb-0 text-sm">
                             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: p.color }}></div>
                             <span className="text-[#a4b4c4]">{p.name === 'A' ? 'FC Green Eagles' : 'Black Panthers FC'}:</span>
@@ -49,7 +49,7 @@ const Comparison = () => {
         return null;
     };
 
-    const MetricBar = ({ label, leftVal, rightVal, leftPct, showSymbol = '', delay = 0 }: any) => (
+    const MetricBar = ({ label, leftVal, rightVal, leftPct, showSymbol = '', delay = 0 }: { label: string; leftVal: number; rightVal: number; leftPct: number; showSymbol?: string; delay?: number }) => (
         <motion.div variants={itemVariants} className="mb-6 last:mb-0">
             <div className="flex justify-between text-xs font-bold mb-2">
                 <span className="text-[#10b981]">{leftVal}{showSymbol}</span>
@@ -73,7 +73,7 @@ const Comparison = () => {
         </motion.div>
     );
 
-    const TableRow = ({ label, left, right }: any) => {
+    const TableRow = ({ label, left, right }: { label: string; left: string | number; right: string | number }) => {
         const isLeftHigher = Number(left) > Number(right);
         const isRightHigher = Number(right) > Number(left);
         return (
@@ -92,7 +92,7 @@ const Comparison = () => {
             const dataUrl = await toPng(pageRef.current, {
                 backgroundColor: '#0a0f16',
                 cacheBust: true,
-                filter: (node: any) => {
+                filter: (node: HTMLElement) => {
                     return node.getAttribute?.('data-html2canvas-ignore') !== 'true';
                 }
             });

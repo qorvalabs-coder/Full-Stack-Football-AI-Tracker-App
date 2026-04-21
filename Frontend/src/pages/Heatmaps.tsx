@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter } from 'recharts';
 import { motion } from 'framer-motion';
 import { containerVariants, itemVariants, hoverScale, tapScale } from '../utils/animations';
@@ -20,39 +20,43 @@ const Heatmaps = () => {
         { name: 'Alexei', position: 'ST', speed: 85, dribbling: 82, shooting: 92, passing: 70, defending: 35, overall: 9.0, goals: 22, assists: 5 },
     ];
 
-    const scatterData = Array.from({ length: 15 }).map(() => ({
+    const scatterData = useMemo(() => Array.from({ length: 15 }).map(() => ({
         x: Math.random() * 100,
         y: Math.random() * 100,
         z: Math.random() * 100,
-    }));
+    })), []);
 
     const currentPlayer = playerData.find(p => p.name === selectedPlayer) || playerData[1];
 
-    const renderPitchGrid = (color: string) => (
-        <div className="relative w-full aspect-[1.6] bg-[#0a0f16] border border-white/10 rounded-xl overflow-hidden mt-4">
-            <div className="absolute inset-0 grid grid-cols-10 grid-rows-6 opacity-30">
-                {Array.from({ length: 60 }).map((_, i) => (
-                    <motion.div
-                        key={i}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: i * 0.01 }}
-                        className="border border-white/5"
-                        style={{ backgroundColor: color === 'green' ? `rgba(0, 200, 100, ${Math.random() * 0.4})` : `rgba(150, 150, 150, ${Math.random() * 0.4})` }}
-                    />
-                ))}
+    const renderPitchGrid = (color: string) => {
+        const gridCells = useMemo(() => Array.from({ length: 60 }).map(() => Math.random() * 0.4), []);
+        
+        return (
+            <div className="relative w-full aspect-[1.6] bg-[#0a0f16] border border-white/10 rounded-xl overflow-hidden mt-4">
+                <div className="absolute inset-0 grid grid-cols-10 grid-rows-6 opacity-30">
+                    {Array.from({ length: 60 }).map((_, i) => (
+                        <motion.div
+                            key={i}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: i * 0.01 }}
+                            className="border border-white/5"
+                            style={{ backgroundColor: color === 'green' ? `rgba(0, 200, 100, ${gridCells[i]})` : `rgba(150, 150, 150, ${gridCells[i]})` }}
+                        />
+                    ))}
+                </div>
+                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/20 -translate-x-1/2" />
+                <div className="absolute left-1/2 top-1/2 w-[20%] h-[30%] border border-white/20 rounded-full -translate-x-1/2 -translate-y-1/2" />
+                <div className="absolute left-0 top-[20%] w-[15%] h-[60%] border border-white/20 border-l-0" />
+                <div className="absolute right-0 top-[20%] w-[15%] h-[60%] border border-white/20 border-r-0" />
+                <div className="absolute bottom-2 right-4 text-[10px] font-bold text-white/30 flex gap-2 items-center">
+                    <span>Low</span>
+                    <div className={`w-16 h-2 bg-gradient-to-r ${color === 'green' ? 'from-[#1a2d1d] to-[#00c968]' : 'from-[#1d252f] to-[#8495a7]'} rounded-full`}></div>
+                    <span>High</span>
+                </div>
             </div>
-            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/20 -translate-x-1/2" />
-            <div className="absolute left-1/2 top-1/2 w-[20%] h-[30%] border border-white/20 rounded-full -translate-x-1/2 -translate-y-1/2" />
-            <div className="absolute left-0 top-[20%] w-[15%] h-[60%] border border-white/20 border-l-0" />
-            <div className="absolute right-0 top-[20%] w-[15%] h-[60%] border border-white/20 border-r-0" />
-            <div className="absolute bottom-2 right-4 text-[10px] font-bold text-white/30 flex gap-2 items-center">
-                <span>Low</span>
-                <div className={`w-16 h-2 bg-gradient-to-r ${color === 'green' ? 'from-[#1a2d1d] to-[#00c968]' : 'from-[#1d252f] to-[#8495a7]'} rounded-full`}></div>
-                <span>High</span>
-            </div>
-        </div>
-    );
+        );
+    };
 
     return (
         <div className="container mx-auto px-4 py-32 max-w-7xl">

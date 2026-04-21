@@ -6,7 +6,7 @@ import {
     PieChart, Pie, Cell
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from './Card';
-import { cn } from './Button';
+import { cn } from '../../utils/cn';
 
 interface BaseChartProps {
     title?: string;
@@ -14,7 +14,7 @@ interface BaseChartProps {
     height?: number;
 }
 
-export const RadarStatsChart: React.FC<BaseChartProps & { data: any[] }> = ({ title, data, className, height = 300 }) => {
+export const RadarStatsChart: React.FC<BaseChartProps & { data: Record<string, string | number>[] }> = ({ title, data, className, height = 300 }) => {
     return (
         <Card className={cn("flex flex-col", className)}>
             {title && (
@@ -37,7 +37,7 @@ export const RadarStatsChart: React.FC<BaseChartProps & { data: any[] }> = ({ ti
     );
 };
 
-export const PerformanceBarChart: React.FC<BaseChartProps & { data: any[] }> = ({ title, data, className, height = 300 }) => {
+export const PerformanceBarChart: React.FC<BaseChartProps & { data: Record<string, string | number>[] }> = ({ title, data, className, height = 300 }) => {
     return (
         <Card className={cn("flex flex-col", className)}>
             {title && (
@@ -63,7 +63,7 @@ export const PerformanceBarChart: React.FC<BaseChartProps & { data: any[] }> = (
     );
 };
 
-export const TrendLineChart: React.FC<BaseChartProps & { data: any[] }> = ({ title, data, className, height = 300 }) => {
+export const TrendLineChart: React.FC<BaseChartProps & { data: Record<string, string | number>[] }> = ({ title, data, className, height = 300 }) => {
     return (
         <Card className={cn("flex flex-col", className)}>
             {title && (
@@ -90,7 +90,7 @@ export const TrendLineChart: React.FC<BaseChartProps & { data: any[] }> = ({ tit
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
-export const DonutChart: React.FC<BaseChartProps & { data: any[] }> = ({ title, data, className, height = 300 }) => {
+export const DonutChart: React.FC<BaseChartProps & { data: Record<string, string | number>[] }> = ({ title, data, className, height = 300 }) => {
     return (
         <Card className={cn("flex flex-col", className)}>
             {title && (
