@@ -1,15 +1,31 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, LogIn } from 'lucide-react';
+import { Mail, Lock, LogIn, Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { api } from '../services/api';
+import toast from 'react-hot-toast';
 
 const LoginPage = () => {
     const navigate = useNavigate();
     const { login } = useAuth();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        login();
-        navigate('/dashboard');
+        setIsLoading(true);
+        try {
+            const response = await api.auth.login({ email, password });
+            login(response);
+            toast.success('Login successful!');
+            navigate('/dashboard');
+        } catch (err) {
+            console.error("Login error:", err);
+            // Error is already toasted by api.request
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -54,6 +70,9 @@ const LoginPage = () => {
                                     <input
                                         type="email"
                                         placeholder="you@example.com"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
                                         className="w-full bg-[#0a0f16] border border-white/5 rounded-xl py-3.5 pl-11 pr-4 text-[13px] text-white placeholder:text-[#5e6b7e] focus:border-primary/50 focus:bg-[#0a0f16] focus:outline-none transition-all"
                                     />
                                 </div>
@@ -66,6 +85,9 @@ const LoginPage = () => {
                                     <input
                                         type="password"
                                         placeholder="Your password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
                                         className="w-full bg-[#0a0f16] border border-white/5 rounded-xl py-3.5 pl-11 pr-10 text-[13px] text-white placeholder:text-[#5e6b7e] focus:border-primary/50 focus:bg-[#0a0f16] focus:outline-none transition-all"
                                     />
                                     <button type="button" aria-label="Toggle password visibility" className="absolute right-3.5 top-1/2 -translate-y-1/2 text-primary">
@@ -75,8 +97,13 @@ const LoginPage = () => {
                             </div>
                         </div>
 
-                        <button type="submit" className="w-full bg-primary hover:bg-[#00c968] text-black font-bold h-[46px] rounded-xl text-[14px] flex items-center justify-center gap-2 transition-colors mt-2">
-                            <LogIn className="h-4 w-4" /> Sign In
+                        <button 
+                            type="submit" 
+                            disabled={isLoading}
+                            className="w-full bg-primary hover:bg-[#00c968] text-black font-bold h-[46px] rounded-xl text-[14px] flex items-center justify-center gap-2 transition-colors mt-2 disabled:opacity-50"
+                        >
+                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+                            {isLoading ? 'Signing In...' : 'Sign In'}
                         </button>
                     </form>
 

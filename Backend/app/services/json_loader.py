@@ -80,49 +80,66 @@ def load_players() -> list[PlayerStats]:
 
 @lru_cache(maxsize=1)
 def load_matches() -> list[MatchData]:
-    """Load matches.json and return typed MatchData list."""
-    raw = _read_json("matches.json")
-    matches = []
-    for item in raw:
-        home = TeamSummary(**item["home_team"])
-        away = TeamSummary(**item["away_team"])
+    """Load all match-related JSON files and return consolidated MatchData list."""
+    data_dir = _data_path()
+    all_matches = []
+    
+    # We look for all .json files except standard players/teams
+    for path in data_dir.glob("*.json"):
+        if path.name in ["players.json", "teams.json"]:
+            continue
+            
+        try:
+            with path.open("r", encoding="utf-8") as fh:
+                raw = json.load(fh)
+                match_list = raw if isinstance(raw, list) else [raw]
+                
+                for item in match_list:
+                    # Skip if it doesn't look like a match object (very basic check)
+                    if "home_team" not in item:
+                        continue
+                        
+                    home = TeamSummary(**item["home_team"])
+                    away = TeamSummary(**item["away_team"])
 
-        passes = [Pass(**p) for p in item.get("passes", [])]
-        turnovers = [Turnover(**t) for t in item.get("turnovers", [])]
-        events = [MatchEvent(**e) for e in item.get("events", [])]
-        segments = [PossessionSegment(**s) for s in item.get("possession_segments", [])]
+                    passes = [Pass(**p) for p in item.get("passes", [])]
+                    turnovers = [Turnover(**t) for t in item.get("turnovers", [])]
+                    events = [MatchEvent(**e) for e in item.get("events", [])]
+                    segments = [PossessionSegment(**s) for s in item.get("possession_segments", [])]
 
-        # positions: dict[player_id → list[Position]]
-        raw_positions: dict[str, list[dict]] = item.get("positions", {})
-        typed_positions: dict[str, list[Position]] = {
-            pid: [Position(**p) for p in pos_list]
-            for pid, pos_list in raw_positions.items()
-        }
+                    raw_positions: dict[str, list[dict]] = item.get("positions", {})
+                    typed_positions: dict[str, list[Position]] = {
+                        pid: [Position(**p) for p in pos_list]
+                        for pid, pos_list in raw_positions.items()
+                    }
 
-        match = MatchData(
-            id=item["id"],
-            date=item["date"],
-            home_team=home,
-            away_team=away,
-            home_score=item["home_score"],
-            away_score=item["away_score"],
-            duration_minutes=item.get("duration_minutes", 90),
-            status=item.get("status", "Full Time"),
-            passes=passes,
-            turnovers=turnovers,
-            events=events,
-            possession_segments=segments,
-            positions=typed_positions,
-            metadata=item.get("metadata", {}),
-        )
-        # Attach players from global player list for this match's teams
-        all_players = load_players()
-        match_team_ids = {home.id, away.id}
-        match.players = [p for p in all_players if p.team_id in match_team_ids]
-        matches.append(match)
+                    match = MatchData(
+                        id=item["id"],
+                        date=item["date"],
+                        home_team=home,
+                        away_team=away,
+                        home_score=item["home_score"],
+                        away_score=item["away_score"],
+                        duration_minutes=item.get("duration_minutes", 90),
+                        status=item.get("status", "Full Time"),
+                        passes=passes,
+                        turnovers=turnovers,
+                        events=events,
+                        possession_segments=segments,
+                        positions=typed_positions,
+                        metadata=item.get("metadata", {}),
+                    )
+                    
+                    # Attach players
+                    all_players = load_players()
+                    match_team_ids = {home.id, away.id}
+                    match.players = [p for p in all_players if p.team_id in match_team_ids]
+                    all_matches.append(match)
+        except Exception as e:
+            logger.error("Failed to load matches from %s: %s", path.name, e)
 
-    logger.debug("Loaded %d matches", len(matches))
-    return matches
+    logger.debug("Loaded %d matches total", len(all_matches))
+    return all_matches
 
 
 def bust_cache() -> None:

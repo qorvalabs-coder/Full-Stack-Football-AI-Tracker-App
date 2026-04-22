@@ -46,13 +46,23 @@ def analyze_video_task(task_id: str, input_path: str):
         
         results = run_analysis(input_path, output_path)
         
-        # 3. Update status to SUCCESS
+        # 3. Export to Match Data (Bridge to Match API)
+        from football_analysis.exporter import export_to_match_data
+        # We save this to the Backend's data directory so load_matches can find it
+        backend_data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'Backend', 'app', 'data'))
+        match_id, json_path = export_to_match_data(task_id, task.filename, results, backend_data_dir)
+
+        # 4. Update status to SUCCESS
         if task:
             task.status = TaskStatus.SUCCESS
             task.output_path = output_path
-            # We could serialize important bits of 'results' here if they are small
-            task.result_data = {"completed": True} 
+            task.result_data = {
+                "completed": True,
+                "match_id": match_id,
+                "json_path": json_path
+            } 
             session.commit()
+
             
     except Exception as e:
         print(f"Error in task {task_id}: {str(e)}")

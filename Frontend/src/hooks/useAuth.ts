@@ -1,12 +1,16 @@
 import { createContext, useContext } from 'react';
 
+import type { User, TokenResponse } from '../services/api';
+
 interface AuthContextType {
     isAuth: boolean;
-    login: () => void;
+    user: User | null;
+    login: (tokenResponse: TokenResponse) => void;
     logout: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
 
 
 export const useAuth = () => {

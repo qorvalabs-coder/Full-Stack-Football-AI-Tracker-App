@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
-import { Play, Upload, BarChart3, Users, Map, Settings, Trash2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Play, Upload, BarChart3, Users, Map, Settings, Trash2, ArrowRight } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { containerVariants, itemVariants, hoverScale, tapScale } from '../utils/animations';
 import { api, type MatchSummary } from '../services/api';
-
+import { useAuth } from '../hooks/useAuth';
 const Dashboard = () => {
+    const { user } = useAuth();
+    const navigate = useNavigate();
     const [recordings, setRecordings] = useState<MatchSummary[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [user] = useState({ name: 'Mohamed', avatar: 'MO' }); // Fallback until auth is fully hooked up
+    
+    // User info formatting
+    const userName = user?.name || 'User';
+    const userAvatar = user?.name ? user.name.substring(0, 2).toUpperCase() : 'US';
 
     useEffect(() => {
         const fetchData = async () => {
@@ -61,11 +66,11 @@ const Dashboard = () => {
                         transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.2 }}
                         className="h-16 w-16 rounded-full bg-primary flex items-center justify-center text-2xl font-bold text-[#0a0f16]"
                     >
-                        {user.avatar}
+                        {userAvatar}
                     </motion.div>
                     <div>
                         <p className="text-white/50 text-sm font-medium">Welcome back,</p>
-                        <h1 className="text-4xl font-bold text-white">{user.name}!</h1>
+                        <h1 className="text-4xl font-bold text-white">{userName}!</h1>
                     </div>
                 </div>
                 <p className="text-[#8495a7] text-sm max-w-md leading-relaxed">
@@ -161,22 +166,30 @@ const Dashboard = () => {
                                     <h3 className="font-bold text-sm text-white mb-1">{rec.homeTeam} vs {rec.awayTeam}</h3>
                                     <div className="text-[10px] text-[#5e6b7e] font-medium mb-4">{rec.date}</div>
 
-                                    <div className="mt-auto flex items-center gap-2">
-                                        <motion.button
-                                            whileTap={tapScale}
-                                            className="flex-grow flex items-center justify-center gap-2 text-[11px] font-bold bg-primary text-[#0a0f16] px-4 py-2.5 rounded-xl hover:bg-[#00c968] transition-colors"
-                                            onClick={() => {/* Navigate to analysis */}}
+                                    <div className="mt-auto flex flex-col gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <motion.button
+                                                whileTap={tapScale}
+                                                className="flex-grow flex items-center justify-center gap-2 text-[11px] font-bold bg-primary text-[#0a0f16] px-4 py-2.5 rounded-xl hover:bg-[#00c968] transition-colors"
+                                                onClick={() => navigate(`/analysis/${rec.id}`)}
+                                            >
+                                                <Play className="h-3.5 w-3.5 fill-current" /> Analyze
+                                            </motion.button>
+                                            <motion.button
+                                                whileTap={tapScale}
+                                                title='delete'
+                                                onClick={() => handleDelete(rec.id)}
+                                                className="bg-[#151b23] text-red-500 hover:bg-black p-2.5 rounded-xl transition-colors border border-white/5"
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </motion.button>
+                                        </div>
+                                        <Link 
+                                            to={`/comparison?matchId=${rec.id}`}
+                                            className="flex items-center justify-center gap-2 text-[10px] font-bold bg-[#1e293b] text-white/70 px-4 py-2 rounded-lg hover:bg-[#2d3748] transition-colors border border-white/5"
                                         >
-                                            <Play className="h-3.5 w-3.5 fill-current" /> Analyze
-                                        </motion.button>
-                                        <motion.button
-                                            whileTap={tapScale}
-                                            title='delete'
-                                            onClick={() => handleDelete(rec.id)}
-                                            className="bg-[#151b23] text-red-500 hover:bg-black p-2.5 rounded-xl transition-colors border border-white/5"
-                                        >
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                        </motion.button>
+                                            <Users className="h-3 w-3" /> Compare Teams
+                                        </Link>
                                     </div>
                                 </div>
                             </motion.div>
@@ -187,12 +200,5 @@ const Dashboard = () => {
         </div>
     );
 };
-
-// Internal Import helper
-const ArrowRight = ({ className }: { className?: string }) => (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-    </svg>
-);
 
 export default Dashboard;

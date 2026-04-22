@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 
 const Upload = () => {
     const [file, setFile] = useState<File | null>(null);
+    const [uploadMode, setUploadMode] = useState<'video' | 'data'>('video');
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [statusMessage, setStatusMessage] = useState('');
@@ -41,48 +42,61 @@ const Upload = () => {
             const formData = new FormData();
             formData.append('file', file);
 
-            // 1. Upload Video
-            const data = await api.upload.video(formData);
-            const taskId = data.task_id;
-            
-            setUploadProgress(40);
-            setStatusMessage('Video received! AI is processing...');
-            toast.success('Video uploaded successfully!');
+            if (uploadMode === 'video') {
+                // 1. Upload Video
+                const data = await api.upload.video(formData);
+                const taskId = data.task_id;
+                
+                setUploadProgress(40);
+                setStatusMessage('Video received! AI is processing...');
+                toast.success('Video uploaded successfully!');
 
-            // 2. Polling for Status
-            const pollInterval = setInterval(async () => {
-                try {
-                    const task = await api.upload.getTaskStatus(taskId);
+                // 2. Polling for Status
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const task = await api.upload.getTaskStatus(taskId);
 
-                    if (task.status === 'processing') {
-                        setUploadProgress(70);
-                        setStatusMessage('YOLOv8 is analyzing match frames...');
-                    } else if (task.status === 'success') {
-                        clearInterval(pollInterval);
-                        setUploadProgress(100);
-                        setUploadComplete(true);
-                        setIsUploading(false);
-                        setStatusMessage('Analysis Complete!');
-                        toast.success('Match analysis complete!');
-                        
-                        setTimeout(() => {
-                            navigate(`/analysis/${taskId}`);
-                        }, 1500);
-                    } else if (task.status === 'failed') {
-                        clearInterval(pollInterval);
-                        setIsUploading(false);
-                        setStatusMessage(`Failed: ${task.error_message}`);
-                        toast.error(`Analysis failed: ${task.error_message}`);
+                        if (task.status === 'processing') {
+                            setUploadProgress(70);
+                            setStatusMessage('AI is analyzing match frames...');
+                        } else if (task.status === 'success') {
+                            clearInterval(pollInterval);
+                            setUploadProgress(100);
+                            setUploadComplete(true);
+                            setIsUploading(false);
+                            setStatusMessage('Analysis Complete!');
+                            toast.success('Match analysis complete!');
+                            
+                            setTimeout(() => {
+                                navigate(`/analysis/${taskId}`);
+                            }, 1500);
+                        } else if (task.status === 'failed') {
+                            clearInterval(pollInterval);
+                            setIsUploading(false);
+                            setStatusMessage(`Failed: ${task.error_message}`);
+                            toast.error(`Analysis failed: ${task.error_message}`);
+                        }
+                    } catch (err) {
+                        console.error('Polling error:', err);
                     }
-                } catch (err) {
-                    console.error('Polling error:', err);
-                    // Error is already toasted by the api service
-                }
-            }, 3000);
+                }, 3000);
+            } else {
+                // Upload JSON Data
+                const data = await api.upload.matchJson(formData);
+                setUploadProgress(100);
+                setUploadComplete(true);
+                setIsUploading(false);
+                setStatusMessage('Data Uploaded!');
+                toast.success('Match data integrated successfully!');
+                
+                setTimeout(() => {
+                    navigate(`/analysis/match/${data.match_id}`);
+                }, 1500);
+            }
 
         } catch (error) {
             setIsUploading(false);
-            setStatusMessage('Error: Connection failed.');
+            setStatusMessage('Error: Upload failed.');
             console.error('Upload error:', error);
         }
     };
@@ -94,10 +108,27 @@ const Upload = () => {
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className="mb-10"
+                className="mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-6"
             >
-                <h1 className="text-3xl font-bold text-white mb-2">Upload Match Video</h1>
-                <p className="text-[#8495a7] text-sm">Upload your football match video for AI-powered analysis.</p>
+                <div>
+                    <h1 className="text-3xl font-bold text-white mb-2">Upload Match Data</h1>
+                    <p className="text-[#8495a7] text-sm">Provide match footage or JSON data for analysis.</p>
+                </div>
+
+                <div className="flex bg-[#0f151c] p-1 rounded-xl border border-white/5">
+                    <button
+                        onClick={() => { setUploadMode('video'); handleRemove(); }}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${uploadMode === 'video' ? 'bg-primary text-black' : 'text-white/60 hover:text-white'}`}
+                    >
+                        Video Analysis
+                    </button>
+                    <button
+                        onClick={() => { setUploadMode('data'); handleRemove(); }}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${uploadMode === 'data' ? 'bg-primary text-black' : 'text-white/60 hover:text-white'}`}
+                    >
+                        JSON Data
+                    </button>
+                </div>
             </motion.div>
 
             {/* Upload Zone */}
@@ -111,14 +142,14 @@ const Upload = () => {
                     title='select'
                     type="file"
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    accept="video/*"
+                    accept={uploadMode === 'video' ? 'video/*' : '.json,application/json'}
                     onChange={handleFileChange}
                     disabled={file !== null}
                 />
 
                 <AnimatePresence mode="wait">
                     {!file ? (
-                        <motion.div
+                    <motion.div
                             key="empty"
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -128,10 +159,12 @@ const Upload = () => {
                             <div className="w-12 h-12 rounded-2xl bg-[#0f151c] border border-white/5 flex items-center justify-center mb-6">
                                 <UploadIcon className="h-5 w-5 text-primary" />
                             </div>
-                            <h3 className="text-white font-bold text-sm mb-2">Drop your video here</h3>
+                            <h3 className="text-white font-bold text-sm mb-2">Drop your {uploadMode === 'video' ? 'video' : 'JSON'} here</h3>
                             <p className="text-[#5e6b7e] text-[11px] mb-6">or click to browse files</p>
                             <p className="text-[#334155] text-[10px] uppercase font-bold tracking-wider">
-                                Supports: MP4, AVI, MOV, MKV, WEBM (Max 2GB)
+                                {uploadMode === 'video' 
+                                    ? 'Supports: MP4, AVI, MOV, MKV, WEBM (Max 2GB)' 
+                                    : 'Supports: JSON (Match Schema v1)'}
                             </p>
                         </motion.div>
                     ) : (

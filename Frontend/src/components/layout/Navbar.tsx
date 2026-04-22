@@ -14,7 +14,7 @@ function cn(...inputs: ClassValue[]) {
 const Navbar = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { isAuth, logout } = useAuth();
+    const { isAuth, user, logout } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
 
     const handleLogout = () => {
@@ -104,8 +104,10 @@ const Navbar = () => {
                         <div className="flex items-center gap-4">
                             <motion.div whileHover={hoverScale}>
                                 <Link to="/dashboard" className="flex items-center gap-2 rounded-full border border-white/10 bg-surface/50 px-3 py-1.5 transition-colors hover:bg-surface text-sm font-medium">
-                                    <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">MO</div>
-                                    <span className="text-white/90">Mohamed</span>
+                                    <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
+                                        {user?.name ? user.name.substring(0, 2).toUpperCase() : 'US'}
+                                    </div>
+                                    <span className="text-white/90">{user?.name || 'User'}</span>
                                     <ChevronDown className="h-4 w-4 text-white/50 ml-1" />
                                 </Link>
                             </motion.div>
@@ -184,8 +186,10 @@ const Navbar = () => {
                             {isAuth ? (
                                 <div className="flex flex-col gap-3">
                                     <Link to="/dashboard" onClick={() => setIsOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 border border-white/5 bg-white/5 transition-colors">
-                                        <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">MO</div>
-                                        <span className="text-white/90 font-bold">Mohamed</span>
+                                        <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+                                            {user?.name ? user.name.substring(0, 2).toUpperCase() : 'US'}
+                                        </div>
+                                        <span className="text-white/90 font-bold">{user?.name || 'User'}</span>
                                     </Link>
                                     <button onClick={handleLogout} className="text-center px-4 py-3.5 text-sm font-bold text-white bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 rounded-xl transition-colors">
                                         Logout

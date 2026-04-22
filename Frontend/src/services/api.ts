@@ -9,6 +9,29 @@ export interface ApiResponse<T> {
     timestamp: string;
 }
 
+export interface User {
+    id: string;
+    name: string;
+    email: string;
+}
+
+export interface TokenResponse {
+    accessToken: string;
+    tokenType: string;
+    user: User;
+}
+
+export interface LoginRequest {
+    email: string;
+    password: string;
+}
+
+export interface RegisterRequest {
+    name: string;
+    email: string;
+    password: string;
+}
+
 export interface MatchSummary {
     id: string;
     date: string;
@@ -133,9 +156,20 @@ export interface PlayerHeatmap {
     points: HeatmapPoint[];
 }
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     try {
-        const response = await fetch(`${BASE_URL}${path}`, options);
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        const headers = new Headers(options.headers);
+        
+        if (token && !headers.has('Authorization')) {
+            headers.set('Authorization', `Bearer ${token}`);
+        }
+
+        const response = await fetch(`${BASE_URL}${path}`, {
+            ...options,
+            headers,
+        });
+        
         const result: ApiResponse<T> = await response.json();
         
         if (!response.ok || !result.success) {
@@ -178,6 +212,25 @@ export const api = {
             body: formData,
         }),
         getTaskStatus: (taskId: string) => request<{ status: string, error_message?: string }>(`/analysis/tasks/${taskId}`),
+        matchJson: (formData: FormData) => request<{ match_id: string, filename: string }>('/upload', {
+            method: 'POST',
+            body: formData,
+        }),
+    },
+    auth: {
+        login: (data: LoginRequest) => request<TokenResponse>('/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }),
+        register: (data: RegisterRequest) => request<TokenResponse>('/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }),
+        me: (token: string) => request<User>('/auth/me', {
+            headers: { 'Authorization': `Bearer ${token}` },
+        }),
     }
 };
 
