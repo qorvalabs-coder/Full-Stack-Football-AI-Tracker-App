@@ -1,38 +1,54 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { Share2, Download, RefreshCcw, Clock, Calendar, Zap, Loader2 } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import { motion } from 'framer-motion';
 import { containerVariants, itemVariants, hoverScale, tapScale } from '../utils/animations';
+import { api, type MatchOverview } from '../services/api';
 
 const MatchAnalysis = () => {
+    const { id } = useParams<{ id: string }>();
     const pageRef = useRef<HTMLDivElement>(null);
     const [isExporting, setIsExporting] = useState(false);
-    const pieData = [
-        { name: 'FC Green Eagles', value: 58 },
-        { name: 'Black Panthers FC', value: 42 },
-    ];
+    const [data, setData] = useState<MatchOverview | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
     const COLORS = ['#10b981', '#334155'];
 
-    const barData = [
-        { name: 'Shots', home: 14, away: 8 },
-        { name: 'On Target', home: 8, away: 4 },
-        { name: 'Corners', home: 6, away: 3 },
-        { name: 'Fouls', home: 12, away: 16 },
-        { name: 'Yellow', home: 2, away: 3 },
-        { name: 'Passes', home: 450, away: 320 },
-    ];
+    useEffect(() => {
+        const fetchMatchData = async () => {
+            if (!id) return;
+            try {
+                const overview = await api.matches.getOverview(id);
+                setData(overview);
+            } catch (err) {
+                console.error("Match analysis fetch error:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-    const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
-        if (active && payload && payload.length) {
+        fetchMatchData();
+    }, [id]);
+
+    interface ChartPayload {
+        name: string;
+        value: number | string;
+        fill?: string;
+        dataKey?: string;
+    }
+
+    const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: ChartPayload[]; label?: string }) => {
+        if (active && payload && payload.length && data) {
             return (
                 <div className="bg-[#0f151c] border border-[#242e3a] p-3 rounded-lg shadow-xl">
                     <p className="text-white font-medium mb-2">{label}</p>
-                    {payload.map((p: { fill: string; dataKey: string; value: string | number }, i: number) => (
+                    {payload.map((p, i) => (
                         <div key={i} className="flex items-center gap-2 mb-1 last:mb-0 text-sm">
                             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: p.fill }}></div>
-                            <span className="text-[#a4b4c4]">{p.dataKey === 'home' ? 'FC Green Eagles' : 'Black Panthers FC'}:</span>
+                            <span className="text-[#a4b4c4]">{p.dataKey === 'home' ? data.homeTeam : data.awayTeam}:</span>
                             <span className="text-white font-bold">{p.value}</span>
                         </div>
                     ))}
@@ -66,7 +82,7 @@ const MatchAnalysis = () => {
             const pdfHeight = (img.height * pdfWidth) / img.width;
 
             pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save('match-analysis.pdf');
+            pdf.save(`match-analysis-${id}.pdf`);
         } catch (error) {
             console.error("Error exporting PDF:", error);
         } finally {
@@ -74,10 +90,10 @@ const MatchAnalysis = () => {
         }
     };
 
-
     const handleShare = async () => {
+        if (!data) return;
         const shareData = {
-            title: 'Match Analysis - FC Green Eagles vs Black Panthers FC',
+            title: `Match Analysis - ${data.homeTeam} vs ${data.awayTeam}`,
             text: 'Check out this AI-powered match analysis!',
             url: window.location.href,
         };
@@ -93,6 +109,27 @@ const MatchAnalysis = () => {
             alert("Link copied to clipboard!");
         }
     };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[#0a0f16]">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
+    if (!data) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[#0a0f16] text-white">
+                <p>Match analysis data not found.</p>
+            </div>
+        );
+    }
+
+    const pieData = [
+        { name: data.homeTeam, value: data.possession[data.homeTeam] || 50 },
+        { name: data.awayTeam, value: data.possession[data.awayTeam] || 50 },
+    ];
 
     return (
         <div ref={pageRef} className="max-w-7xl mx-auto px-6 md:px-10 lg:px-12 py-32 text-white bg-[#0a0f16]">
@@ -136,7 +173,7 @@ const MatchAnalysis = () => {
                 ></motion.div>
 
                 <div className="absolute top-6 right-8 text-xs font-semibold text-[#8495a7] flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5" /> 2026-03-03
+                    <Calendar className="w-3.5 h-3.5" /> {data.date}
                 </div>
 
                 <div className="flex justify-between items-center w-full max-w-2xl relative z-10 mt-2">
@@ -150,7 +187,7 @@ const MatchAnalysis = () => {
                         <div className="w-16 h-16 bg-[#15202b] border border-[#242e3a] rounded-2xl flex items-center justify-center mb-3">
                             <span className="text-3xl">🦅</span>
                         </div>
-                        <span className="text-sm font-bold text-white">FC Green Eagles</span>
+                        <span className="text-sm font-bold text-white text-center">{data.homeTeam}</span>
                     </motion.div>
 
                     {/* Score */}
@@ -161,9 +198,9 @@ const MatchAnalysis = () => {
                             transition={{ delay: 0.5, type: "spring" }}
                             className="flex items-center justify-center gap-4 text-5xl md:text-6xl font-black text-white mb-2 tracking-tight"
                         >
-                            <span>3</span>
+                            <span>{data.homeScore}</span>
                             <span className="text-[#334155] font-light mx-1">-</span>
-                            <span>1</span>
+                            <span>{data.awayScore}</span>
                             <motion.div
                                 animate={{ rotate: 360 }}
                                 transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
@@ -172,7 +209,7 @@ const MatchAnalysis = () => {
                             </motion.div>
                         </motion.div>
                         <div className="flex items-center gap-1.5 text-xs font-semibold text-[#8495a7]">
-                            <Clock className="w-3.5 h-3.5" /> Full Time · 90'
+                            <Clock className="w-3.5 h-3.5" /> Full Time
                         </div>
                     </div>
 
@@ -186,7 +223,7 @@ const MatchAnalysis = () => {
                         <div className="w-16 h-16 bg-[#15202b] border border-[#242e3a] rounded-2xl flex items-center justify-center mb-3">
                             <span className="text-3xl">🐆</span>
                         </div>
-                        <span className="text-sm font-bold text-[#e2e8f0]">Black Panthers FC</span>
+                        <span className="text-sm font-bold text-[#e2e8f0] text-center">{data.awayTeam}</span>
                     </motion.div>
                 </div>
             </motion.div>
@@ -201,12 +238,6 @@ const MatchAnalysis = () => {
                 <motion.button whileHover={hoverScale} whileTap={tapScale} className="bg-[#10b981] hover:bg-[#059669] text-[#0a0f16] px-5 py-2 rounded-lg text-sm font-bold transition-colors">
                     Overview
                 </motion.button>
-                <motion.button whileHover={hoverScale} whileTap={tapScale} className="bg-[#0b1016] hover:bg-[#15202b] text-white border border-[#242e3a] px-5 py-2 rounded-lg text-sm font-bold transition-colors">
-                    Events
-                </motion.button>
-                <motion.button whileHover={hoverScale} whileTap={tapScale} className="bg-[#0b1016] hover:bg-[#15202b] text-white border border-[#242e3a] px-5 py-2 rounded-lg text-sm font-bold transition-colors">
-                    Players
-                </motion.button>
             </motion.div>
 
             {/* Top Stat Bars */}
@@ -214,13 +245,11 @@ const MatchAnalysis = () => {
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"
             >
                 {[
-                    { label: 'Ball Possession', icon: <div className="w-2.5 h-2.5 rounded-full bg-[#10b981]"></div>, home: 58, away: 42, unit: '%', isPercentage: true },
-                    { label: 'Pass Accuracy', icon: <Zap className="w-3.5 h-3.5 text-[#10b981]" />, home: 87, away: 79, unit: '%', isPercentage: true },
-                    { label: 'Shots on Target', icon: <div className="w-2.5 h-2.5 rounded-full bg-[#10b981]"></div>, home: 8, away: 4, isPercentage: false, max: 20 },
-                    { label: 'Yellow Cards', icon: <div className="w-2.5 h-2.5 rounded-full border-[2px] border-[#eab308]"></div>, home: 2, away: 3, isPercentage: false, max: 10 },
+                    { label: 'Ball Possession', icon: <div className="w-2.5 h-2.5 rounded-full bg-[#10b981]"></div>, home: data.possession[data.homeTeam], away: data.possession[data.awayTeam], unit: '%', isPercentage: true, max: 100 },
+                    { label: 'Pass Accuracy', icon: <Zap className="w-3.5 h-3.5 text-[#10b981]" />, home: Math.round((data.passAccuracy[data.homeTeam] || 0) * 100), away: Math.round((data.passAccuracy[data.awayTeam] || 0) * 100), unit: '%', isPercentage: true, max: 100 },
                 ].map(stat => {
                     const homePercent = stat.isPercentage ? stat.home : (stat.home / (stat.max || 1)) * 100;
                     const awayPercent = stat.isPercentage ? stat.away : (stat.away / (stat.max || 1)) * 100;
@@ -289,13 +318,13 @@ const MatchAnalysis = () => {
                         <div className="flex flex-col gap-3">
                             <div className="flex items-center gap-2 text-xs font-medium text-white">
                                 <div className="w-2.5 h-2.5 rounded-full bg-[#10b981]"></div>
-                                <span className="w-28 text-[#e2e8f0]">FC Green Eagles</span>
-                                <span className="text-[#10b981] font-bold">58%</span>
+                                <span className="w-28 text-[#e2e8f0] truncate">{data.homeTeam}</span>
+                                <span className="text-[#10b981] font-bold">{data.possession[data.homeTeam]}%</span>
                             </div>
                             <div className="flex items-center gap-2 text-xs font-medium text-[#8495a7]">
                                 <div className="w-2.5 h-2.5 rounded-full bg-[#334155]"></div>
-                                <span className="w-28">Black Panthers FC</span>
-                                <span className="text-[#8495a7] font-bold">42%</span>
+                                <span className="w-28 truncate">{data.awayTeam}</span>
+                                <span className="text-[#8495a7] font-bold">{data.possession[data.awayTeam]}%</span>
                             </div>
                         </div>
                     </div>
@@ -306,7 +335,7 @@ const MatchAnalysis = () => {
                     <h3 className="font-bold text-white mb-6">Match Statistics</h3>
                     <div className="w-full h-[240px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={barData} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }} barGap={2} barCategoryGap={16}>
+                            <BarChart data={data.stats} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }} barGap={2} barCategoryGap={16}>
                                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#242e3a" />
                                 <XAxis type="number" stroke="#8495a7" fontSize={11} tickMargin={10} axisLine={false} tickLine={false} />
                                 <YAxis dataKey="name" type="category" stroke="#8495a7" fontSize={11} axisLine={false} tickLine={false} tickMargin={20} />

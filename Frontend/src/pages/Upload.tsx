@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Upload as UploadIcon, Film, X, Loader2, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { containerVariants, itemVariants, scaleUpVariants, hoverScale, tapScale } from '../utils/animations';
+import { api } from '../services/api';
+import toast from 'react-hot-toast';
 
 const Upload = () => {
     const [file, setFile] = useState<File | null>(null);
@@ -39,28 +41,18 @@ const Upload = () => {
             const formData = new FormData();
             formData.append('file', file);
 
-            const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-
             // 1. Upload Video
-            const response = await fetch(`${BASE_URL}/api/v1/analysis/upload`, {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (!response.ok) throw new Error('Upload failed');
-            
-            const data = await response.json();
-            const taskId = data.data.task_id;
+            const data = await api.upload.video(formData);
+            const taskId = data.task_id;
             
             setUploadProgress(40);
             setStatusMessage('Video received! AI is processing...');
+            toast.success('Video uploaded successfully!');
 
-            // 2. Poll for Status
+            // 2. Polling for Status
             const pollInterval = setInterval(async () => {
                 try {
-                    const statusRes = await fetch(`${BASE_URL}/api/v1/analysis/tasks/${taskId}`);
-                    const statusData = await statusRes.json();
-                    const task = statusData.data;
+                    const task = await api.upload.getTaskStatus(taskId);
 
                     if (task.status === 'processing') {
                         setUploadProgress(70);
@@ -71,6 +63,7 @@ const Upload = () => {
                         setUploadComplete(true);
                         setIsUploading(false);
                         setStatusMessage('Analysis Complete!');
+                        toast.success('Match analysis complete!');
                         
                         setTimeout(() => {
                             navigate(`/analysis/${taskId}`);
@@ -79,15 +72,17 @@ const Upload = () => {
                         clearInterval(pollInterval);
                         setIsUploading(false);
                         setStatusMessage(`Failed: ${task.error_message}`);
+                        toast.error(`Analysis failed: ${task.error_message}`);
                     }
                 } catch (err) {
                     console.error('Polling error:', err);
+                    // Error is already toasted by the api service
                 }
             }, 3000);
 
         } catch (error) {
             setIsUploading(false);
-            setStatusMessage('Error: Connection failed. Make sure the backend is running.');
+            setStatusMessage('Error: Connection failed.');
             console.error('Upload error:', error);
         }
     };

@@ -31,14 +31,22 @@ const Comparison = () => {
         { name: 'Defending', A: 70, B: 100 },
     ];
 
-    const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
+    interface ChartPayload {
+        name: string;
+        value: number | string;
+        color?: string;
+        fill?: string;
+        dataKey?: string;
+    }
+
+    const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: ChartPayload[]; label?: string }) => {
         if (active && payload && payload.length) {
             return (
                 <div className="bg-[#0b1016] border border-[#242e3a] p-3 rounded-lg shadow-xl">
                     <p className="text-white font-medium mb-2">{label}</p>
-                    {payload.map((p: { color: string; name: string; value: string | number }, i: number) => (
+                    {payload.map((p, i) => (
                         <div key={i} className="flex items-center gap-2 mb-1 last:mb-0 text-sm">
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: p.color }}></div>
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: p.color || p.fill }}></div>
                             <span className="text-[#a4b4c4]">{p.name === 'A' ? 'FC Green Eagles' : 'Black Panthers FC'}:</span>
                             <span className="text-white font-bold">{p.value}</span>
                         </div>

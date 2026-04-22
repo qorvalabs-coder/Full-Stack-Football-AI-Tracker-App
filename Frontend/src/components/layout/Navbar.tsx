@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Activity, ArrowUpDown, Star, Map, HelpCircle, Info, LogIn, UserPlus, ChevronDown, Menu, X, Upload } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { tapScale, hoverScale } from '../../utils/animations';
 

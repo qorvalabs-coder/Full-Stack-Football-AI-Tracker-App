@@ -28,9 +28,9 @@ const Heatmaps = () => {
 
     const currentPlayer = playerData.find(p => p.name === selectedPlayer) || playerData[1];
 
-    const renderPitchGrid = (color: string) => {
+    const PitchGrid = ({ color }: { color: string }) => {
         const gridCells = useMemo(() => Array.from({ length: 60 }).map(() => Math.random() * 0.4), []);
-        
+
         return (
             <div className="relative w-full aspect-[1.6] bg-[#0a0f16] border border-white/10 rounded-xl overflow-hidden mt-4">
                 <div className="absolute inset-0 grid grid-cols-10 grid-rows-6 opacity-30">
@@ -94,11 +94,11 @@ const Heatmaps = () => {
             >
                 <motion.div variants={itemVariants} className="bg-[#0f151c] border border-white/5 rounded-3xl p-6">
                     <h2 className="text-sm font-bold text-white mb-2">FC Green Eagles — Zone Activity</h2>
-                    {renderPitchGrid('green')}
+                    <PitchGrid color='green' />
                 </motion.div>
                 <motion.div variants={itemVariants} className="bg-[#0f151c] border border-white/5 rounded-3xl p-6">
                     <h2 className="text-sm font-bold text-white mb-2">Black Panthers FC — Zone Activity</h2>
-                    {renderPitchGrid('gray')}
+                    <PitchGrid color='gray' />
                 </motion.div>
             </motion.div>
 
