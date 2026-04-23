@@ -52,14 +52,17 @@ const Comparison = () => {
             B: Number(s.away)
         })) || [];
 
-    const barData = matchData?.stats
+    const comparisons = matchData?.stats || [];
+
+    const statsData = comparisons.map(s => ({
+        name: s.name,
+        A: Number(s.home),
+        B: Number(s.away)
+    }));
+
+    const barData = statsData
         .filter(s => !['Possession', 'Pass Accuracy'].includes(s.name))
-        .slice(0, 5)
-        .map(s => ({
-            name: s.name,
-            A: Number(s.home),
-            B: Number(s.away)
-        })) || [];
+        .slice(0, 5);
 
     const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { dataKey: string; color?: string; fill?: string; value: number | string }[]; label?: string }) => {
         if (active && payload && payload.length) {
