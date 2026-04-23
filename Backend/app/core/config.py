@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     model_dir: str = "app/models_store"
 
     # CORS – stored as a comma-separated string, parsed on access
-    cors_origins: str = "http://localhost:3000,http://localhost:5173"
+    cors_origins: str = "http://localhost:3000,http://localhost:5173,https://ai-football-analytics-platform.vercel.app"
 
     # Logging
     log_level: str = "INFO"

@@ -1,6 +1,11 @@
 import toast from 'react-hot-toast';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+let BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+
+// Ensure the URL ends with /api/v1 for consistency with backend routes
+if (!BASE_URL.includes('/api/v1')) {
+    BASE_URL = BASE_URL.replace(/\/$/, '') + '/api/v1';
+}
 
 export interface ApiResponse<T> {
     success: boolean;
