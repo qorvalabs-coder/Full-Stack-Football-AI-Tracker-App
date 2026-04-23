@@ -8,13 +8,16 @@ from camera_movement_estimator import CameraMovementEstimator
 from view_transformer import ViewTransformer
 from speed_and_distance_estimator import SpeedAndDistance_Estimator
 
+import os
 
 def run_analysis(input_video_path, output_video_path):
     # Read Video
     video_frames = read_video(input_video_path)
 
     # Initialize Tracker
-    tracker = Tracker('models/best.pt')
+    # Use absolute path relative to this file for production stability
+    model_path = os.path.join(os.path.dirname(__file__), 'models', 'best.pt')
+    tracker = Tracker(model_path)
 
     print(f"Analyzing {len(video_frames)} frames...")
     tracks = tracker.get_object_tracks(video_frames,
