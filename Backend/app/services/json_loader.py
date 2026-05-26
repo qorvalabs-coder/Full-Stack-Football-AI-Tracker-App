@@ -129,12 +129,20 @@ def load_matches() -> list[MatchData]:
                         positions=typed_positions,
                         metadata=item.get("metadata", {}),
                     )
-                    
-                    # Attach players
-                    all_players = load_players()
-                    match_team_ids = {home.id, away.id}
-                    match.players = [p for p in all_players if p.team_id in match_team_ids]
+
+                    # Prefer embedded players (written by AI exporter).
+                    # Fall back to players.json for manually-uploaded match data.
+                    if item.get("players"):
+                        match.players = [
+                            PlayerStats(**p) for p in item["players"]
+                        ]
+                    else:
+                        all_players = load_players()
+                        match_team_ids = {home.id, away.id}
+                        match.players = [p for p in all_players if p.team_id in match_team_ids]
+
                     all_matches.append(match)
+
         except Exception as e:
             logger.error("Failed to load matches from %s: %s", path.name, e)
 

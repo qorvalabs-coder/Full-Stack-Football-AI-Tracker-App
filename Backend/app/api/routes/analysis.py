@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -18,10 +18,13 @@ router = APIRouter()
 @router.post("/upload", response_model=ApiResponse[dict], status_code=201)
 async def upload_video(
     file: UploadFile = File(...),
+    home_team: str = Form(default="Team A"),
+    away_team: str = Form(default="Team B"),
     db: Session = Depends(get_db),
 ) -> ApiResponse:
     """
     Upload a video file and trigger AI analysis.
+    Optional home_team / away_team names are forwarded to the analysis worker.
     """
     if not file.filename.lower().endswith((".mp4", ".avi", ".mov")):
         raise HTTPException(status_code=400, detail="Only video files (mp4, avi, mov) are accepted.")
@@ -29,13 +32,13 @@ async def upload_video(
     # 1. Create a unique task ID
     task_id = str(uuid.uuid4())
     filename = f"{task_id}_{file.filename}"
-    
+
     # 2. Save file to persistent volume
     media_dir = Path(settings.media_root)
     media_dir.mkdir(parents=True, exist_ok=True)
     input_path = media_dir / "inputs" / filename
     input_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     with input_path.open("wb") as buffer:
         content = await file.read()
         buffer.write(content)
@@ -50,18 +53,19 @@ async def upload_video(
     db.add(task)
     db.commit()
 
-    # 4. Trigger Celery Task
-    # We use a string name for the task so we don't have to import the Agent code here
+    # 4. Trigger Celery Task with team names
     celery_app.send_task(
         "agent.analyze_video",
         args=[task_id, str(input_path)],
-        task_id=task_id
+        kwargs={"home_team_name": home_team, "away_team_name": away_team},
+        task_id=task_id,
     )
 
     return ApiResponse.ok(
         {"task_id": task_id, "status": TaskStatus.PENDING},
-        message="Video uploaded. Analysis started."
+        message="Video uploaded. Analysis started.",
     )
+
 
 
 @router.get("/tasks/{task_id}", response_model=ApiResponse[dict])

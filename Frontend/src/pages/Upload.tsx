@@ -13,6 +13,8 @@ const Upload = () => {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [statusMessage, setStatusMessage] = useState('');
     const [uploadComplete, setUploadComplete] = useState(false);
+    const [homeTeam, setHomeTeam] = useState('');
+    const [awayTeam, setAwayTeam] = useState('');
 
     const navigate = useNavigate();
 
@@ -41,6 +43,9 @@ const Upload = () => {
         try {
             const formData = new FormData();
             formData.append('file', file);
+            // Append team names — Backend defaults to "Team A" / "Team B" if empty
+            formData.append('home_team', homeTeam.trim() || 'Team A');
+            formData.append('away_team', awayTeam.trim() || 'Team B');
 
             if (uploadMode === 'video') {
                 // 1. Upload Video
@@ -90,7 +95,8 @@ const Upload = () => {
                 toast.success('Match data integrated successfully!');
                 
                 setTimeout(() => {
-                    navigate(`/analysis/match/${data.match_id}`);
+                    // Navigate to /analysis/:id (match the actual router path)
+                    navigate(`/analysis/${data.match_id}`);
                 }, 1500);
             }
 
@@ -214,7 +220,10 @@ const Upload = () => {
                         <motion.div variants={itemVariants}>
                             <label className="block text-[11px] font-bold text-white/50 mb-2 ml-1">Home Team</label>
                             <input
+                                id="home-team-input"
                                 type="text"
+                                value={homeTeam}
+                                onChange={(e) => setHomeTeam(e.target.value)}
                                 placeholder="FC Green Eagles"
                                 className="w-full bg-[#0a0f16] border border-white/5 rounded-xl px-4 py-3.5 text-xs text-white placeholder:text-[#334155] focus:outline-none focus:border-primary/50 transition-colors"
                             />
@@ -222,7 +231,10 @@ const Upload = () => {
                         <motion.div variants={itemVariants}>
                             <label className="block text-[11px] font-bold text-white/50 mb-2 ml-1">Away Team</label>
                             <input
+                                id="away-team-input"
                                 type="text"
+                                value={awayTeam}
+                                onChange={(e) => setAwayTeam(e.target.value)}
                                 placeholder="Black Panthers FC"
                                 className="w-full bg-[#0a0f16] border border-white/5 rounded-xl px-4 py-3.5 text-xs text-white placeholder:text-[#334155] focus:outline-none focus:border-primary/50 transition-colors"
                             />

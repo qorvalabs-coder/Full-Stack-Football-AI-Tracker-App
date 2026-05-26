@@ -5,16 +5,26 @@ import os
 import numpy as np
 import pandas as pd
 import cv2
-import sys 
+import sys
 sys.path.append('../')
 from utils import get_center_of_bbox, get_bbox_width, get_foot_position
+from pathlib import Path
+from boxmot.trackers.strongsort.strongsort import StrongSort
+
+import torch
+
 
 class Tracker:
     def __init__(self, model_path):
-        self.model = YOLO(model_path) 
-        self.tracker = sv.ByteTrack()
+        self.device = '0' if torch.cuda.is_available() else 'cpu'
+        self.model = YOLO(model_path)
+        self.tracker = StrongSort(
+            reid_weights=Path("osnet_x0_25_msmt17.pt"),
+            device=self.device,
+            half=False,
+        )
 
-    def add_position_to_tracks(sekf,tracks):
+    def add_position_to_tracks(self, tracks):
         for object, object_tracks in tracks.items():
             for frame_num, track in enumerate(object_tracks):
                 for track_id, track_info in track.items():
@@ -38,10 +48,10 @@ class Tracker:
         return ball_positions
 
     def detect_frames(self, frames):
-        batch_size=20 
-        detections = [] 
-        for i in range(0,len(frames),batch_size):
-            detections_batch = self.model.predict(frames[i:i+batch_size],conf=0.1)
+        batch_size = 20
+        detections = []
+        for i in range(0, len(frames), batch_size):
+            detections_batch = self.model.predict(frames[i:i+batch_size], conf=0.5, iou=0.5)
             detections += detections_batch
         return detections
 
@@ -72,23 +82,33 @@ class Tracker:
                 if cls_names[class_id] == "goalkeeper":
                     detection_supervision.class_id[object_ind] = cls_names_inv["player"]
 
-            # Track Objects
-            detection_with_tracks = self.tracker.update_with_detections(detection_supervision)
+            # Track Objects using StrongSort
+            dets = np.hstack([
+                detection_supervision.xyxy,
+                detection_supervision.confidence[:, None],
+                detection_supervision.class_id[:, None].astype(float)
+            ])
+            detection_with_tracks = self.tracker.update(dets, frames[frame_num])
 
             tracks["players"].append({})
             tracks["referees"].append({})
             tracks["ball"].append({})
 
-            for frame_detection in detection_with_tracks:
-                bbox = frame_detection[0].tolist()
-                cls_id = frame_detection[3]
-                track_id = frame_detection[4]
+            player_cls = cls_names_inv.get('player', -1)
+            referee_cls = cls_names_inv.get('referee', -2)
+            goalkeeper_cls = cls_names_inv.get('goalkeeper', -3)
 
-                if cls_id == cls_names_inv['player']:
-                    tracks["players"][frame_num][track_id] = {"bbox":bbox}
-                
-                if cls_id == cls_names_inv['referee']:
-                    tracks["referees"][frame_num][track_id] = {"bbox":bbox}
+            for frame_detection in detection_with_tracks:
+                bbox = frame_detection[:4].tolist()
+                track_id = int(frame_detection[4])
+                cls_id = int(round(frame_detection[6]))
+
+                if cls_id == player_cls or cls_id == goalkeeper_cls:
+                    tracks["players"][frame_num][track_id] = {"bbox": bbox}
+                elif cls_id == referee_cls:
+                    # Cap referees at 3 to filter false positives
+                    if len(tracks["referees"][frame_num]) < 3:
+                        tracks["referees"][frame_num][track_id] = {"bbox": bbox}
             
             for frame_detection in detection_supervision:
                 bbox = frame_detection[0].tolist()
@@ -97,9 +117,20 @@ class Tracker:
                 if cls_id == cls_names_inv['ball']:
                     tracks["ball"][frame_num][1] = {"bbox":bbox}
 
+        # Reclassify sideline detections (likely linesmen) as referees
+        for frame_num in range(len(tracks['players'])):
+            frame_h, frame_w = frames[frame_num].shape[:2]
+            misclassified = [
+                track_id for track_id, track_info in tracks['players'][frame_num].items()
+                if (lambda b: (b[1] + b[3]) / 2)(track_info['bbox']) < frame_h * 0.1
+                or (lambda b: (b[1] + b[3]) / 2)(track_info['bbox']) > frame_h * 0.9
+            ]
+            for track_id in misclassified:
+                tracks['referees'][frame_num][track_id] = tracks['players'][frame_num].pop(track_id)
+
         if stub_path is not None:
-            with open(stub_path,'wb') as f:
-                pickle.dump(tracks,f)
+            with open(stub_path, 'wb') as f:
+                pickle.dump(tracks, f)
 
         return tracks
     
@@ -164,23 +195,24 @@ class Tracker:
 
         return frame
 
-    def draw_team_ball_control(self,frame,frame_num,team_ball_control):
-        # Draw a semi-transparent rectaggle 
+    def draw_team_ball_control(self, frame, frame_num, team_ball_control):
         overlay = frame.copy()
-        cv2.rectangle(overlay, (1350, 850), (1900,970), (255,255,255), -1 )
+        cv2.rectangle(overlay, (1350, 850), (1900, 970), (255, 255, 255), -1)
         alpha = 0.4
         cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
 
-        team_ball_control_till_frame = team_ball_control[:frame_num+1]
-        # Get the number of time each team had ball control
-        team_1_num_frames = team_ball_control_till_frame[team_ball_control_till_frame==1].shape[0]
-        team_2_num_frames = team_ball_control_till_frame[team_ball_control_till_frame==2].shape[0]
-        team_1 = team_1_num_frames/(team_1_num_frames+team_2_num_frames)
-        team_2 = team_2_num_frames/(team_1_num_frames+team_2_num_frames)
+        team_ball_control_till_frame = team_ball_control[:frame_num + 1]
+        team_1_num_frames = team_ball_control_till_frame[team_ball_control_till_frame == 1].shape[0]
+        team_2_num_frames = team_ball_control_till_frame[team_ball_control_till_frame == 2].shape[0]
+        total = team_1_num_frames + team_2_num_frames
+        if total == 0:
+            team_1 = team_2 = 0.0
+        else:
+            team_1 = team_1_num_frames / total
+            team_2 = team_2_num_frames / total
 
-        cv2.putText(frame, f"Team 1 Ball Control: {team_1*100:.2f}%",(1400,900), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), 3)
-        cv2.putText(frame, f"Team 2 Ball Control: {team_2*100:.2f}%",(1400,950), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), 3)
-
+        cv2.putText(frame, f"Team 1 Ball Control: {team_1*100:.2f}%", (1400, 900), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3)
+        cv2.putText(frame, f"Team 2 Ball Control: {team_2*100:.2f}%", (1400, 950), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3)
         return frame
 
     def draw_annotations(self,video_frames, tracks,team_ball_control):

@@ -12,3 +12,8 @@ scikit-learn
 psycopg2-binary
 pydantic
 pydantic-settings
+
+# StrongSort tracker with ReID support (replaces ByteTrack)
+boxmot
+torch
+torchvision
