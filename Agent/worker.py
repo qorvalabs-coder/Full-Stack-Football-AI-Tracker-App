@@ -10,7 +10,11 @@ from celery import Celery
 from football_analysis.main import run_analysis
 
 # Celery app mirrors the Backend configuration
-REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+REDIS_URL = (
+    os.environ.get("CELERY_BROKER_URL")
+    or os.environ.get("REDIS_URL")
+    or "redis://localhost:6379/0"
+)
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 worker_app = Celery(
