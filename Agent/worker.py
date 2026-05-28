@@ -125,7 +125,7 @@ def analyze_video_task(task_id: str, input_path: str,
         # 5. Export to Backend-compatible MatchData JSON
         from football_analysis.exporter import export_to_match_data
 
-        # Export into the Agent's data directory (mounted volume)
+        # Export locally first (Agent's container), then push to Backend
         agent_data_dir = "/app/data"
         match_id, json_path = export_to_match_data(
             task_id=task_id,
@@ -137,7 +137,24 @@ def analyze_video_task(task_id: str, input_path: str,
             away_team_name=away_team_name,
         )
 
-        # 6. Mark task as SUCCESS
+        # 6. Push JSON to Backend API so it's stored on the Backend's volume.
+        #    The Agent and Backend have separate containers/volumes, so writing
+        #    to /app/data here does NOT make it visible to the Backend.
+        import requests as _req
+
+        upload_url = f"{BACKEND_API_URL}/api/v1/upload"
+        with open(json_path, "rb") as jf:
+            resp = _req.post(
+                upload_url,
+                files={"file": (f"{match_id}.json", jf, "application/json")},
+                timeout=30,
+            )
+        if resp.ok:
+            print(f"[Worker] Pushed match JSON to Backend → {upload_url} (status {resp.status_code})")
+        else:
+            print(f"[Worker] WARNING: Backend upload failed ({resp.status_code}): {resp.text}")
+
+        # 7. Mark task as SUCCESS
         if task:
             task.status = TaskStatus.SUCCESS
             task.output_path = local_output_path
