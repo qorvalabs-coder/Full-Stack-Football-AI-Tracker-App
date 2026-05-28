@@ -20,11 +20,11 @@ class Tracker:
         self.device = 'cpu'  # Railway has no GPU
         self.model = YOLO(model_path)
 
-        # Build the ReID appearance model first (boxmot v18+ API change:
-        # StrongSort now expects a pre-built model object via reid_model=,
-        # not a file path via reid_weights= as in older versions).
+        # boxmot v18+ API: build the ReID model first, then pass to StrongSort.
+        # ReidAutoBackend auto-downloads the weights on first use (same as Colab).
+        reid_weights = Path("osnet_x0_25_msmt17.pt")
         reid_model = ReidAutoBackend(
-            weights=Path("/app/osnet_x0_25_msmt17.pt"),
+            weights=reid_weights,
             device=self.device,
             half=False,
         )

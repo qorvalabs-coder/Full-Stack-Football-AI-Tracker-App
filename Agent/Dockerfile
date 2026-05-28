@@ -23,12 +23,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install gdown for Google Drive model download
 RUN pip install --no-cache-dir gdown
 
-# Pre-download StrongSORT ReID weights via curl (handles HuggingFace redirects).
-# wget fails with exit code 6 on HuggingFace's redirect chain.
-# osnet_x0_25_msmt17.pt is ~2.2 MB.
-RUN curl -fSL -o /app/osnet_x0_25_msmt17.pt \
-    "https://huggingface.co/mikel-brostrom/boxmot/resolve/main/osnet_x0_25_msmt17.pt" && \
-    echo "ReID weights ready: $(du -sh /app/osnet_x0_25_msmt17.pt)"
 
 # ── Download YOLO model at build time ────────────────────────────────────────
 # best.pt (101.8 MB) — publicly shared on Google Drive
