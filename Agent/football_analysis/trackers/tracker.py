@@ -19,7 +19,7 @@ class Tracker:
         self.device = '0' if torch.cuda.is_available() else 'cpu'
         self.model = YOLO(model_path)
         self.tracker = StrongSort(
-            reid_weights=Path("osnet_x0_25_msmt17.pt"),
+            reid_weights=Path("/app/osnet_x0_25_msmt17.pt"),
             device=self.device,
             half=False,
         )

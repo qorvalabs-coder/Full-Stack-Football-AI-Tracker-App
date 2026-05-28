@@ -22,14 +22,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install gdown for Google Drive model download
 RUN pip install --no-cache-dir gdown
 
-# Pre-download StrongSort ReID weights at build time so the worker
-# starts instantly without a cold-download on first task.
-# osnet_x0_25_msmt17.pt is ~2.2 MB.
+# Pre-download StrongSORT ReID weights to an ABSOLUTE path at build time.
+# Using Path('/app/osnet_x0_25_msmt17.pt') ensures the runtime lookup
+# (which also uses /app/) resolves to the same file — no mismatch.
 RUN python -c "\
 from pathlib import Path; \
 from boxmot.trackers.strongsort.strongsort import StrongSort; \
-StrongSort(reid_weights=Path('osnet_x0_25_msmt17.pt'), device='cpu', half=False); \
-print('ReID weights downloaded successfully.')"
+p = Path('/app/osnet_x0_25_msmt17.pt'); \
+StrongSort(reid_weights=p, device='cpu', half=False); \
+size = p.stat().st_size // 1024; \
+print(f'ReID weights ready at {p} — {size} KB')"
 
 # ── Download YOLO model at build time ────────────────────────────────────────
 # best.pt (101.8 MB) — publicly shared on Google Drive
