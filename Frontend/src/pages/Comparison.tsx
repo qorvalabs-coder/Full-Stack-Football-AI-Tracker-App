@@ -13,6 +13,7 @@ import { api, type MatchOverview } from '../services/api';
 import BlurIn from '../components/ui/BlurIn';
 import GlassCard from '../components/ui/GlassCard';
 import SectionLabel from '../components/ui/SectionLabel';
+import TeamShield from '../components/ui/TeamShield';
 
 const Comparison = () => {
     const [searchParams] = useSearchParams();
@@ -203,7 +204,7 @@ const Comparison = () => {
                     >
                         <GlassCard className="p-8 lg:p-10 mb-6 flex flex-col md:flex-row items-center justify-between">
                             <motion.div variants={itemVariants} className="flex flex-col items-center w-1/3">
-                                <div className="w-14 h-14 bg-primary/10 border border-primary/30 rounded-2xl flex items-center justify-center mb-3 text-xl">⚽</div>
+                                <TeamShield teamName={matchData.homeTeam} variant="home" className="mb-3" />
                                 <h3 className="font-display font-bold text-foreground mb-2 text-center">{matchData.homeTeam}</h3>
                                 <span className="font-mono text-[9px] px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">Home</span>
                             </motion.div>
@@ -215,7 +216,7 @@ const Comparison = () => {
                                 <span className="flex items-center gap-1 text-primary text-xs font-semibold"><Trophy className="w-3 h-3" /> {matchData.status}</span>
                             </motion.div>
                             <motion.div variants={itemVariants} className="flex flex-col items-center w-1/3">
-                                <div className="w-14 h-14 bg-surface-2 border border-border rounded-2xl flex items-center justify-center mb-3 text-xl">⚽</div>
+                                <TeamShield teamName={matchData.awayTeam} variant="away" className="mb-3" />
                                 <h3 className="font-display font-bold text-muted mb-2 text-center">{matchData.awayTeam}</h3>
                                 <span className="font-mono text-[9px] px-3 py-1 rounded-full bg-surface-2 text-muted border border-border">Away</span>
                             </motion.div>

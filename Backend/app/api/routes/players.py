@@ -3,17 +3,49 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.core.exceptions import NotFoundException
+from app.core.logging import get_logger
 from app.models.responses import ApiResponse
 from app.models.schemas import PlayerDetailSchema, PlayerHeatmapSchema, PlayerSummarySchema
 from app.services.analytics_service import analytics_service
 from app.services.json_loader import load_matches, load_players
 
 router = APIRouter()
+logger = get_logger(__name__)
+
+
+def _all_players():
+    """
+    Return a unified player list.
+
+    Priority order:
+    1. Players embedded in match JSON files (written by the AI exporter).
+    2. Standalone players.json (legacy / manual uploads).
+
+    Players from matches take precedence — they contain AI-derived stats.
+    """
+    # Gather players from all loaded matches
+    match_players = {}
+    try:
+        for match in load_matches():
+            for p in getattr(match, "players", []):
+                match_players[p.id] = p
+    except Exception as e:
+        logger.warning("Could not load match-embedded players: %s", e)
+
+    # If we have match-embedded players, use those
+    if match_players:
+        return list(match_players.values())
+
+    # Fallback to standalone players.json
+    try:
+        return load_players()
+    except Exception:
+        return []
 
 
 @router.get("", response_model=ApiResponse[list[PlayerSummarySchema]])
 async def list_players() -> ApiResponse:
-    players = load_players()
+    players = _all_players()
     summaries = [
         PlayerSummarySchema(
             id=p.id,
@@ -33,7 +65,7 @@ async def list_players() -> ApiResponse:
 
 @router.get("/{player_id}", response_model=ApiResponse[PlayerSummarySchema])
 async def get_player(player_id: str) -> ApiResponse:
-    player = next((p for p in load_players() if p.id == player_id), None)
+    player = next((p for p in _all_players() if p.id == player_id), None)
     if not player:
         raise NotFoundException("Player", player_id)
     return ApiResponse.ok(
@@ -48,7 +80,7 @@ async def get_player(player_id: str) -> ApiResponse:
 
 @router.get("/{player_id}/stats", response_model=ApiResponse[PlayerDetailSchema])
 async def player_stats(player_id: str) -> ApiResponse:
-    player = next((p for p in load_players() if p.id == player_id), None)
+    player = next((p for p in _all_players() if p.id == player_id), None)
     if not player:
         raise NotFoundException("Player", player_id)
     detail = analytics_service.player_detail(player)
@@ -57,7 +89,7 @@ async def player_stats(player_id: str) -> ApiResponse:
 
 @router.get("/{player_id}/heatmap", response_model=ApiResponse[PlayerHeatmapSchema])
 async def player_heatmap(player_id: str) -> ApiResponse:
-    player = next((p for p in load_players() if p.id == player_id), None)
+    player = next((p for p in _all_players() if p.id == player_id), None)
     if not player:
         raise NotFoundException("Player", player_id)
 

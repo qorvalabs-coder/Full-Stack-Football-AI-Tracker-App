@@ -64,8 +64,8 @@ class AnalyticsService:
             home_score=match.home_score,
             away_score=match.away_score,
             status=match.status,
-            possession={"home": home_poss, "away": away_poss},
-            pass_accuracy={"home": home_acc, "away": away_acc},
+            possession={match.home_team.name: home_poss, match.away_team.name: away_poss},
+            pass_accuracy={match.home_team.name: home_acc, match.away_team.name: away_acc},
             stats=stats,
         )
 

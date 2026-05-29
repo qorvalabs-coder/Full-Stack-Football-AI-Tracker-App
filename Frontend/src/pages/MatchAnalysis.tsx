@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import {
     Share2, Download, RefreshCcw, Clock, Calendar,
-    Zap, Loader2
+    Zap, Loader2, AlertTriangle, TrendingUp, Activity
 } from 'lucide-react';
 import {
     PieChart, Pie, Cell, BarChart, Bar,
@@ -12,11 +12,12 @@ import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import { motion } from 'framer-motion';
 import { hoverScale, tapScale } from '../utils/animations';
-import { api, type MatchOverview } from '../services/api';
+import { api, type MatchOverview, type Recommendation } from '../services/api';
 import BlurIn from '../components/ui/BlurIn';
 import GlassCard from '../components/ui/GlassCard';
 import SectionLabel from '../components/ui/SectionLabel';
 import StatCard from '../components/ui/StatCard';
+import TeamShield from '../components/ui/TeamShield';
 
 const COLORS = ['#00e676', '#1e2d3a'];
 
@@ -25,12 +26,19 @@ const MatchAnalysis = () => {
     const pageRef = useRef<HTMLDivElement>(null);
     const [isExporting, setIsExporting] = useState(false);
     const [data, setData] = useState<MatchOverview | null>(null);
+    const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         if (!id) return;
-        api.matches.getOverview(id)
-            .then(setData)
+        Promise.all([
+            api.matches.getOverview(id),
+            api.recommendations.forMatch(id).catch(() => []),
+        ])
+            .then(([overview, recs]) => {
+                setData(overview);
+                setRecommendations(recs);
+            })
             .catch(console.error)
             .finally(() => setIsLoading(false));
     }, [id]);
@@ -62,14 +70,32 @@ const MatchAnalysis = () => {
             const dataUrl = await toPng(pageRef.current, {
                 backgroundColor: '#080c10',
                 cacheBust: true,
+                pixelRatio: 2,
                 filter: (node: HTMLElement) => node.getAttribute?.('data-html2canvas-ignore') !== 'true',
             });
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const img = new Image();
             img.src = dataUrl;
             await new Promise(resolve => { img.onload = resolve; });
+
             const pdfWidth = pdf.internal.pageSize.getWidth();
-            pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, (img.height * pdfWidth) / img.width);
+            const pdfPageHeight = pdf.internal.pageSize.getHeight();
+            const imgHeight = (img.height * pdfWidth) / img.width;
+
+            // Multi-page support for long reports
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, imgHeight);
+            heightLeft -= pdfPageHeight;
+
+            while (heightLeft > 0) {
+                position -= pdfPageHeight;
+                pdf.addPage();
+                pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, imgHeight);
+                heightLeft -= pdfPageHeight;
+            }
+
             pdf.save(`match-analysis-${id}.pdf`);
         } catch (e) { console.error(e); } finally { setIsExporting(false); }
     };
@@ -107,24 +133,44 @@ const MatchAnalysis = () => {
         { name: data.awayTeam, value: data.possession[data.awayTeam] || 50 },
     ];
 
+    const homePoss = data.possession[data.homeTeam] ?? 50;
+    const awayPoss = data.possession[data.awayTeam] ?? 50;
+    const homePassAcc = data.passAccuracy[data.homeTeam] ?? 0;
+    const awayPassAcc = data.passAccuracy[data.awayTeam] ?? 0;
+
     const statCards = [
         {
             label: 'Ball Possession',
             icon: <span className="h-2.5 w-2.5 rounded-full bg-primary" />,
-            home: `${data.possession[data.homeTeam]}%`,
-            away: `${data.possession[data.awayTeam]}%`,
-            homePct: data.possession[data.homeTeam],
-            awayPct: data.possession[data.awayTeam],
+            home: `${homePoss}%`,
+            away: `${awayPoss}%`,
+            homePct: homePoss,
+            awayPct: awayPoss,
         },
         {
             label: 'Pass Accuracy',
             icon: <Zap className="h-3.5 w-3.5 text-primary" />,
-            home: `${Math.round((data.passAccuracy[data.homeTeam] || 0) * 100)}%`,
-            away: `${Math.round((data.passAccuracy[data.awayTeam] || 0) * 100)}%`,
-            homePct: Math.round((data.passAccuracy[data.homeTeam] || 0) * 100),
-            awayPct: Math.round((data.passAccuracy[data.awayTeam] || 0) * 100),
+            home: `${Math.round(homePassAcc)}%`,
+            away: `${Math.round(awayPassAcc)}%`,
+            homePct: Math.round(homePassAcc),
+            awayPct: Math.round(awayPassAcc),
         },
     ];
+
+    const priorityIcon = (p: string) => {
+        if (p === 'high') return <AlertTriangle className="h-3.5 w-3.5 text-red-400" />;
+        if (p === 'low') return <TrendingUp className="h-3.5 w-3.5 text-primary" />;
+        return <Activity className="h-3.5 w-3.5 text-yellow-400" />;
+    };
+
+    const priorityBadge = (p: string) => {
+        const cfg: Record<string, string> = {
+            high: 'bg-red-500/10 text-red-400 border-red-500/30',
+            medium: 'bg-yellow-400/10 text-yellow-400 border-yellow-400/30',
+            low: 'bg-primary/10 text-primary border-primary/30',
+        };
+        return cfg[p] || cfg.medium;
+    };
 
     return (
         <div ref={pageRef} className="max-w-7xl mx-auto px-6 md:px-10 py-32">
@@ -165,7 +211,7 @@ const MatchAnalysis = () => {
                     <div className="flex justify-between items-center w-full max-w-lg relative z-10">
                         {/* Home */}
                         <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="flex flex-col items-center flex-1">
-                            <div className="h-16 w-16 bg-primary/10 border border-primary/30 rounded-2xl flex items-center justify-center mb-3 text-3xl">🦅</div>
+                            <TeamShield teamName={data.homeTeam} variant="home" size="lg" className="mb-3" />
                             <span className="text-sm font-bold text-foreground text-center">{data.homeTeam}</span>
                             <span className="font-mono text-[9px] text-primary uppercase tracking-widest mt-1">Home</span>
                         </motion.div>
@@ -196,7 +242,7 @@ const MatchAnalysis = () => {
 
                         {/* Away */}
                         <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="flex flex-col items-center flex-1">
-                            <div className="h-16 w-16 bg-surface-2 border border-border rounded-2xl flex items-center justify-center mb-3 text-3xl">🐆</div>
+                            <TeamShield teamName={data.awayTeam} variant="away" size="lg" className="mb-3" />
                             <span className="text-sm font-bold text-muted text-center">{data.awayTeam}</span>
                             <span className="font-mono text-[9px] text-muted uppercase tracking-widest mt-1">Away</span>
                         </motion.div>
@@ -226,9 +272,9 @@ const MatchAnalysis = () => {
 
             {/* Summary stat row */}
             <BlurIn delay={0.2} className="flex gap-10 py-8 px-2 border-y border-border mb-8">
-                <StatCard value={`${data.possession[data.homeTeam]}%`} label="Possession" glowing />
+                <StatCard value={`${homePoss}%`} label="Possession" glowing />
                 <StatCard value={String(data.homeScore + data.awayScore)} label="Total Goals" />
-                <StatCard value={`${Math.round((data.passAccuracy[data.homeTeam] || 0) * 100)}%`} label="Home Pass Acc." />
+                <StatCard value={`${Math.round(homePassAcc)}%`} label="Home Pass Acc." />
             </BlurIn>
 
             {/* Charts grid */}
@@ -264,12 +310,12 @@ const MatchAnalysis = () => {
                             <div className="flex items-center gap-2 text-xs font-medium text-foreground">
                                 <div className="w-2 h-2 rounded-full bg-primary" />
                                 <span className="w-28 truncate">{data.homeTeam}</span>
-                                <span className="text-primary font-bold">{data.possession[data.homeTeam]}%</span>
+                                <span className="text-primary font-bold">{homePoss}%</span>
                             </div>
                             <div className="flex items-center gap-2 text-xs font-medium text-muted">
                                 <div className="w-2 h-2 rounded-full bg-border" />
                                 <span className="w-28 truncate">{data.awayTeam}</span>
-                                <span className="font-bold">{data.possession[data.awayTeam]}%</span>
+                                <span className="font-bold">{awayPoss}%</span>
                             </div>
                         </div>
                     </div>
@@ -296,6 +342,76 @@ const MatchAnalysis = () => {
                     </div>
                 </GlassCard>
             </BlurIn>
+
+            {/* Full Statistics Breakdown Table */}
+            {data.stats && data.stats.length > 0 && (
+                <BlurIn delay={0.3} className="mb-8">
+                    <GlassCard className="p-6 lg:p-8">
+                        <p className="font-mono text-[10px] text-muted uppercase tracking-widest mb-6">Full Statistics Breakdown</p>
+                        <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
+                            <span className="w-1/3 text-center font-display font-bold text-sm text-primary">{data.homeTeam}</span>
+                            <span className="w-1/3 text-center font-mono text-[10px] text-muted uppercase tracking-widest">Stat</span>
+                            <span className="w-1/3 text-center font-display font-bold text-sm text-muted">{data.awayTeam}</span>
+                        </div>
+                        {data.stats.map((s, i) => {
+                            const homeVal = Number(s.home);
+                            const awayVal = Number(s.away);
+                            const homeWins = homeVal > awayVal;
+                            const awayWins = awayVal > homeVal;
+                            return (
+                                <div key={i} className="flex items-center justify-between py-3 border-b border-border/50 last:border-0">
+                                    <span className={`w-1/3 text-center font-bold text-sm ${homeWins ? 'text-primary' : 'text-foreground'}`}>{s.home}</span>
+                                    <span className="w-1/3 text-center text-muted text-xs font-medium">{s.name}</span>
+                                    <span className={`w-1/3 text-center font-bold text-sm ${awayWins ? 'text-primary' : 'text-muted'}`}>{s.away}</span>
+                                </div>
+                            );
+                        })}
+                    </GlassCard>
+                </BlurIn>
+            )}
+
+            {/* AI Recommendations */}
+            {recommendations.length > 0 && (
+                <BlurIn delay={0.35} className="mb-8">
+                    <GlassCard className="p-6 lg:p-8">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="h-8 w-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                                <TrendingUp className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                                <p className="font-mono text-[10px] text-muted uppercase tracking-widest">AI Recommendations</p>
+                                <p className="text-foreground font-display font-bold text-sm">{recommendations.length} insights generated</p>
+                            </div>
+                        </div>
+                        <div className="space-y-3">
+                            {recommendations.slice(0, 10).map((rec, i) => (
+                                <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-background/50 border border-border/50">
+                                    {priorityIcon(rec.priority)}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="font-display font-bold text-xs text-foreground truncate">{rec.title}</span>
+                                            <span className={`shrink-0 font-mono text-[8px] font-bold px-1.5 py-0.5 rounded-full border ${priorityBadge(rec.priority)}`}>
+                                                {rec.priority.toUpperCase()}
+                                            </span>
+                                        </div>
+                                        <p className="text-muted text-[11px] leading-relaxed">{rec.description}</p>
+                                        {rec.reasoning && (
+                                            <p className="text-muted/60 text-[10px] mt-1 font-mono">💡 {rec.reasoning}</p>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </GlassCard>
+                </BlurIn>
+            )}
+
+            {/* PDF Footer */}
+            <div className="text-center py-4 border-t border-border mt-4">
+                <p className="font-mono text-[9px] text-muted/50 uppercase tracking-widest">
+                    GoalSense AI · Powered by Computer Vision · {data.date}
+                </p>
+            </div>
         </div>
     );
 };

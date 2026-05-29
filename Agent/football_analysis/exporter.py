@@ -203,10 +203,21 @@ def export_to_match_data(
     home_turnovers_count = sum(1 for t in turnovers if t.get("losing_team") == 1)
     away_turnovers_count = sum(1 for t in turnovers if t.get("losing_team") == 2)
 
+    # Pass accuracy per team
+    home_pass_attempted = home_passes_count + home_turnovers_count
+    away_pass_attempted = away_passes_count + away_turnovers_count
+    home_pass_acc = round(home_passes_count / home_pass_attempted * 100, 1) if home_pass_attempted > 0 else 0
+    away_pass_acc = round(away_passes_count / away_pass_attempted * 100, 1) if away_pass_attempted > 0 else 0
+
     metadata_stats = [
         {"name": "Passes", "home": home_passes_count, "away": away_passes_count},
         {"name": "Turnovers", "home": home_turnovers_count, "away": away_turnovers_count},
         {"name": "Possession", "home": team_1_pct, "away": team_2_pct},
+        {"name": "Pass Accuracy", "home": home_pass_acc, "away": away_pass_acc},
+        # Not detectable by current YOLO model, but provides structure for future
+        {"name": "Shots", "home": 0, "away": 0},
+        {"name": "Corner Kicks", "home": 0, "away": 0},
+        {"name": "Fouls", "home": 0, "away": 0},
     ]
 
     # ── Step 10: Assemble final MatchData JSON ─────────────────────────────
