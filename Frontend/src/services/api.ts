@@ -198,7 +198,7 @@ export const api = {
     },
     players: {
         list: () => request<PlayerSummary[]>('/players'),
-        get: (id: string) => request<PlayerDetail>(`/players/${id}`),
+        get: (id: string) => request<PlayerDetail>(`/players/${id}/stats`),
         getHeatmap: (id: string) => request<PlayerHeatmap>(`/players/${id}/heatmap`),
     },
     teams: {

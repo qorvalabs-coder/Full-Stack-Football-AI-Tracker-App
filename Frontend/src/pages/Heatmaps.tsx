@@ -156,7 +156,7 @@ const Heatmaps = () => {
                                 </div>
 
                                 <div className="space-y-4 mb-8">
-                                    {Object.entries(playerDetail.attributes).map(([key, val], idx) => (
+                                    {playerDetail.attributes ? Object.entries(playerDetail.attributes).map(([key, val], idx) => (
                                         <motion.div
                                             key={key}
                                             initial={{ opacity: 0, x: 16 }}
@@ -176,15 +176,17 @@ const Heatmaps = () => {
                                                 />
                                             </div>
                                         </motion.div>
-                                    ))}
+                                    )) : (
+                                        <p className="text-muted text-xs font-mono">Attributes data unavailable</p>
+                                    )}
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border">
                                     <GlassCard className="p-4">
-                                        <StatCard value={`${Math.round(playerDetail.passAccuracy * 100)}%`} label="Pass Accuracy" />
+                                        <StatCard value={`${Math.round((playerDetail.passAccuracy ?? 0) * 100)}%`} label="Pass Accuracy" />
                                     </GlassCard>
                                     <GlassCard className="p-4">
-                                        <StatCard value={`${playerDetail.minutesPlayed}'`} label="Minutes Played" />
+                                        <StatCard value={`${playerDetail.minutesPlayed ?? 0}'`} label="Minutes Played" />
                                     </GlassCard>
                                 </div>
                             </GlassCard>
